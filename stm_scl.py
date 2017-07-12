@@ -57,7 +57,7 @@ class STM_Motor_SCL:
 
     return;
 
-  def setup_motor(self, accl_decl_rate = None, gearing = 4000, jog_speed = 0.5, velocity = 0.4):
+  def setup_motor(self, accl_decl_rate = None, gearing = 4000, jog_speed = 0.5, velocity = 0.5):
      if( accl_decl_rate == None ):
        if( self.ip == frame_motor_ip ):
          accl_decl_rate = 0.4
@@ -174,7 +174,7 @@ class STM_Motor_SCL:
     p = self.get_immediate_encoder_position()
     print "Checking position: " + str(p) + ", " + str(self.target_position)
 
-    window = 10 
+    window = 40
     if( p < (self.target_position + window) and p > (self.target_position - window) ):
       return(True)
     return(False)
