@@ -15,6 +15,8 @@ class STM_Motor_SCL:
   local_port = 15000
   sock = None
   motor_gearing = 4000
+  mechanical_gearing = 1.0 # Usedif there are gears attached to the motor
+  default_socket_timeout = 5
 
   ENCODER_FUNCTION_OFF = 0
   ENCODER_STALL_DETECTION = 1
@@ -39,6 +41,8 @@ class STM_Motor_SCL:
 
     self.sock.bind(("0.0.0.0", self.local_port))
 
+    self.sock.settimeout(self.default_socket_timeout)
+
     mv = self.get_model_revision()
     print "Model Revision is '" + str(mv) + "'"
 
@@ -53,7 +57,7 @@ class STM_Motor_SCL:
 
     return;
 
-  def setup_motor(self, accl_decl_rate = None, gearing = 4000, jog_speed = 0.5, velocity = 0.5):
+  def setup_motor(self, accl_decl_rate = None, gearing = 4000, jog_speed = 0.5, velocity = 0.4):
      if( accl_decl_rate == None ):
        if( self.ip == frame_motor_ip ):
          accl_decl_rate = 0.4
@@ -162,9 +166,19 @@ class STM_Motor_SCL:
     
   def feed_to_position(self, encoder_counts):
     print "Feeding to " + str(encoder_counts)
+    self.target_position = encoder_counts
     return(self.scl_send_command("FP" + (str)(int(encoder_counts))));
     
-    
+
+  def is_at_target_position(self):
+    p = self.get_immediate_encoder_position()
+    print "Checking position: " + str(p) + ", " + str(self.target_position)
+
+    window = 10 
+    if( p < (self.target_position + window) and p > (self.target_position - window) ):
+      return(True)
+    return(False)
+
 
   def set_position_limit(self, encoder_counts):
     return(self.scl_send_command("PL" + (str)(encoder_counts)))
@@ -200,8 +214,17 @@ class STM_Motor_SCL:
   def set_position(self, fv):
     return(self.scl_send_command("SP" + (str)(fv)));
 
+  def set_mechanical_gearing(self, mg):
+    self.mechanical_gearing = mg
+
+  def get_angle(self):
+    ep = self.get_encoder_position(self)
+    ang = ((float(ep) / float(self.motor_gearing)) * 360.0) / self.mechanical_gearing
+    return ang
+
   def set_angle(self, new_angle):
-    position = int(round((new_angle / 360.0) * self.motor_gearing))
+    position = int(round((new_angle * self.mechanical_gearing / 360.0) * self.motor_gearing))
+    #print "Feeding to position " + str(position) + " for new angle " + str(new_angle)
     self.feed_to_position(position)
     return
 
@@ -210,6 +233,9 @@ class STM_Motor_SCL:
     
   def get_encoder_position(self):
     return(self.scl_send_command("EP", 'value'));
+
+  def get_immediate_encoder_position(self):
+    return(self.scl_send_command("IE", 'value_hex_signed'));
     
   def set_encoder_resolution(self, fv):
     return(self.scl_send_command("ER" + (str)(fv)));
@@ -255,7 +281,36 @@ class STM_Motor_SCL:
       self.sock.close()
       self.sock = None
 
+  def purge_rx_socket(self):
+    got_percent = False
+
+    # Note: After sending the stop and kill command there are various packets that come back from the motor that need to be purged
+    self.sock.settimeout(3)
+
+    for i in range(1, 15):
+      try:
+        data = ""
+        data, addr = self.sock.recvfrom(1024) 
+        data = data.strip()
+        print "Purged a packet from the RX socket: " + self.ip + ": '" + str(data) + "'"
+        print
+
+        if( data.find("%") != -1 ):
+          print "Got a percent..."
+          got_percent = True
+          break
+
+      except socket.error:
+        print "Timeout while purging RX socket, good..."
+        break
+
+    self.sock.settimeout(self.default_socket_timeout)
+
+    print "Got percent = " + str(got_percent)
+    return(got_percent)
+
   def scl_send_command(self, cmd, cmd_type = 'executed'):
+
     # Note: the STM32 is modal. If you power it up and connect via TCP, it seems to got into TCP mode and no longer handles UDP. You have to reset it to get it back into UDP mode.
     pack_data = "BB" + (str)(len(cmd)) + "sc"
     command = pack(pack_data, 0, 7, cmd, '\r')
@@ -284,8 +339,11 @@ class STM_Motor_SCL:
     if((cmd_type == 'executed' and data[2] != '%' and data[2] != '*') ):
       print "ERROR: received message: '", data, "'"
       print "ERROR: received message: '", data[1], "', " + cmd_type
-      raise Exception("Did not get expected response from " + cmd_type + " command, Motor: '" + data + "'")
+      raise Exception("Did not get expected response from " + str(self.ip) + ", '" + cmd_type + "' command '" + str(cmd) + "', Motor: '" + data + "'")
 
+     
+    # Ack for executed command is *
+    # Ack for buffered command is *
 
 
     if data[0] == 0 and data[1] == 7:
@@ -299,6 +357,20 @@ class STM_Motor_SCL:
     data = data.strip()
     if( cmd_type == 'value' and re.match('^[0-9\.]+$', data) ):
       data = float(data)
+
+    if( cmd_type == 'value_hex_signed' ):
+      m = re.search('^.*=([0-9A-Z\.]+)$', data)
+      if( m ) :
+        print "Group is '" + str(m.group(1)) + "'"
+
+        data = int(m.group(1),16)
+
+        if data > 0x7FFFFFFF:
+          data -= 0x100000000
+
+        print "Data parsed is " + str(data)
+
+
     print str(time.clock()) + ": cmd_time = " + str(cmd_time) + " Return data is '" + str(data) + "'"
     return(data);
 
