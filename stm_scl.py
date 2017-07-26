@@ -218,7 +218,7 @@ class STM_Motor_SCL:
     self.mechanical_gearing = mg
 
   def get_angle(self):
-    ep = self.get_encoder_position(self)
+    ep = self.get_encoder_position()
     ang = ((float(ep) / float(self.motor_gearing)) * 360.0) / self.mechanical_gearing
     return ang
 
