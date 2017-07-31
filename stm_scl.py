@@ -4,9 +4,9 @@ from struct import *
 import time
 import re
 
-frame_motor_ip = '10.1.1.10'
-l2_motor_ip    = '10.1.1.11'
-l1_motor_ip    = '10.1.1.12'
+#frame_motor_ip = '10.1.1.10'
+#l2_motor_ip    = '10.1.1.11'
+#l1_motor_ip    = '10.1.1.12'
 
 #FIXME use the new style of class MyObj(obj):
 class STM_Motor_SCL:
@@ -15,7 +15,7 @@ class STM_Motor_SCL:
   local_port = 15000
   sock = None
   motor_gearing = 4000
-  mechanical_gearing = 1.0 # Usedif there are gears attached to the motor
+  mechanical_gearing = 1.0 # Used if there are gears attached to the motor
   default_socket_timeout = 5
 
   ENCODER_FUNCTION_OFF = 0
@@ -24,7 +24,7 @@ class STM_Motor_SCL:
   ENCODER_STALL_PREVENTION_WITH_TIMEOUT = 6
 
 
-  def __init__(self, ip = '10.1.1.10', local_port = None):
+  def __init__(self, ip, local_port = None):
     self.ip = ip
     if( local_port == None ):
       l = re.match('(.*)\.(.*)\.(.*)\.(.*)', ip)
@@ -58,13 +58,15 @@ class STM_Motor_SCL:
     return;
 
   def setup_motor(self, accl_decl_rate = None, gearing = 4000, jog_speed = 0.5, velocity = 0.5):
+     """ Sets initial motor settings, gearing, modes and velocities. """
      if( accl_decl_rate == None ):
-       if( self.ip == frame_motor_ip ):
-         accl_decl_rate = 0.4
-       elif( self.ip == l2_motor_ip ):
-         accl_decl_rate = 0.6
-       else:
-         accl_decl_rate = 0.8
+       accl_decl_rate = 0.4
+       #if( self.ip == frame_motor_ip ):
+       #  accl_decl_rate = 0.4
+       #elif( self.ip == l2_motor_ip ):
+       #  accl_decl_rate = 0.6
+       #else:
+       #  accl_decl_rate = 0.8
 
      print "Setting up motor..."
      self.stop_jogging()
@@ -145,9 +147,7 @@ class STM_Motor_SCL:
   def get_jog_decceleration_rate(self):
     return(self.scl_send_command("JL", 'value'));
     
-
-
-   
+  
 
   def commence_jogging(self):
     return(self.scl_send_command("CJ"));
@@ -171,6 +171,7 @@ class STM_Motor_SCL:
     
 
   def is_at_target_position(self):
+    """ Returns True if the motor is at the target position that it was last instructed to move to, False otherwise. """
     p = self.get_immediate_encoder_position()
     print "Checking position: " + str(p) + ", " + str(self.target_position)
 
@@ -218,12 +219,14 @@ class STM_Motor_SCL:
     self.mechanical_gearing = mg
 
   def get_angle(self):
+    """ Calculates the current angle of the device the motor is controlling based on the known gear ratio and the electronic gearing set on the motor. """
     ep = self.get_immediate_encoder_position()
     #print "EP = " + str(ep) + ", self.motor_gearing = " + str(self.motor_gearing) + ", self.mechanical_gearing = " + str(self.mechanical_gearing)
     ang = float((float(ep) / float(self.motor_gearing)) * 360.0) / float(self.mechanical_gearing)
     return ang
 
   def set_angle(self, new_angle):
+    """ Move the motor shaft such that the thing being controled is at a specific angle, factoring in the mechanical and electronic gearing set. """
     position = int(round((new_angle * self.mechanical_gearing / 360.0) * self.motor_gearing))
     #print "Feeding to position " + str(position) + " for new angle " + str(new_angle)
     self.feed_to_position(position)
@@ -274,15 +277,18 @@ class STM_Motor_SCL:
     
     
   def teardown(self):
+    """ Function to stop the motor before disconnecting. """
     self.stop_jogging()
     self.close()
 
   def close(self):
+    """ Close the socket used to communicate with the motor. """
     if( self.sock != None ):
       self.sock.close()
       self.sock = None
 
   def purge_rx_socket(self):
+    """ Purges old data that has come in via UDP. """
     got_percent = False
 
     # Note: After sending the stop and kill command there are various packets that come back from the motor that need to be purged
@@ -311,6 +317,7 @@ class STM_Motor_SCL:
     return(got_percent)
 
   def scl_send_command(self, cmd, cmd_type = 'executed'):
+    """ Helper function to handle sending commands to the motor and receiving and parsing data that came back. """
 
     # Note: the STM32 is modal. If you power it up and connect via TCP, it seems to got into TCP mode and no longer handles UDP. You have to reset it to get it back into UDP mode.
     pack_data = "BB" + (str)(len(cmd)) + "sc"
@@ -342,10 +349,8 @@ class STM_Motor_SCL:
       print "ERROR: received message: '", data[1], "', " + cmd_type
       raise Exception("Did not get expected response from " + str(self.ip) + ", '" + cmd_type + "' command '" + str(cmd) + "', Motor: '" + data + "'")
 
-     
     # Ack for executed command is *
     # Ack for buffered command is *
-
 
     if data[0] == 0 and data[1] == 7:
       data[0] = ' '
@@ -375,5 +380,5 @@ class STM_Motor_SCL:
     print str(time.clock()) + ": cmd_time = " + str(cmd_time) + " Return data is '" + str(data) + "'"
     return(data);
 
-#FIXME add destructor that closes socket
+
 
