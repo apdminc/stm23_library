@@ -57,6 +57,9 @@ class STM_Motor_SCL:
 
     return;
 
+  def get_ip(self):
+    return(self.ip)
+
   def setup_motor(self, accl_decl_rate = None, gearing = 4000, jog_speed = 0.5, velocity = 0.5):
      """ Sets initial motor settings, gearing, modes and velocities. """
      if( accl_decl_rate == None ):
