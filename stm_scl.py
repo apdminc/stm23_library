@@ -218,6 +218,9 @@ class STM_Motor_SCL:
   def set_position(self, fv):
     return(self.scl_send_command("SP" + (str)(fv)));
 
+  def get_mechanical_gearing(self):
+    return(self.mechanical_gearing)
+
   def set_mechanical_gearing(self, mg):
     self.mechanical_gearing = mg
 
