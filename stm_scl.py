@@ -60,16 +60,8 @@ class STM_Motor_SCL:
   def get_ip(self):
     return(self.ip)
 
-  def setup_motor(self, accl_decl_rate = None, gearing = 4000, jog_speed = 0.5, velocity = 0.5):
+  def setup_motor(self, accl_decl_rate = 0.4, gearing = 4000, jog_speed = 0.4, velocity = 0.4):
      """ Sets initial motor settings, gearing, modes and velocities. """
-     if( accl_decl_rate == None ):
-       accl_decl_rate = 0.4
-       #if( self.ip == frame_motor_ip ):
-       #  accl_decl_rate = 0.4
-       #elif( self.ip == l2_motor_ip ):
-       #  accl_decl_rate = 0.6
-       #else:
-       #  accl_decl_rate = 0.8
 
      print "Setting up motor..."
      self.stop_jogging()
