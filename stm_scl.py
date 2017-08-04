@@ -3,6 +3,7 @@ import math
 from struct import *
 import time
 import re
+import logging
 
 #frame_motor_ip = '10.1.1.10'
 #l2_motor_ip    = '10.1.1.11'
@@ -24,17 +25,22 @@ class STM_Motor_SCL:
   ENCODER_STALL_PREVENTION_WITH_TIMEOUT = 6
 
 
-  def __init__(self, ip, local_port = None):
+  def __init__(self, ip, local_port = None, logger = None):
+    if( logger == None ):
+      self._log = logging.getLogger()
+    else:
+      self._log = logger
+
     self.ip = ip
     if( local_port == None ):
       l = re.match('(.*)\.(.*)\.(.*)\.(.*)', ip)
       port_offset = l.group(4)
-      print "port offset " + port_offset
+      self._log.info("port offset " + port_offset)
       self.local_port = 15000 + int(port_offset)
     else:
       self.local_port = local_port
 
-    print "Initing Stm: IP=" + ip + " local UDP port = " + str(self.local_port)
+    self._log.info("Initing Stm: IP=" + ip + " local UDP port = " + str(self.local_port))
     self.sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM) 
     if self.sock == None:
       raise Exception("Unable to create new UDP socket")
@@ -44,16 +50,15 @@ class STM_Motor_SCL:
     self.sock.settimeout(self.default_socket_timeout)
 
     mv = self.get_model_revision()
-    print "Model Revision is '" + str(mv) + "'"
+    self._log.info("Model Revision is '" + str(mv) + "'")
 
     rv = self.get_revision_level()
-    print "Revision Level is '" + str(rv) + "'"
+    self._log.info("Revision Level is '" + str(rv) + "'")
 
     #mn = self.get_model_number()
-    #print "Model Number is '" + mn + "'"
 
     #if mv != '105W049K':
-    #  print "ERROR Stepper motor did not responded with expected 105W049K value"
+    #  self._log.error("ERROR Stepper motor did not responded with expected 105W049K value")
 
     return;
 
@@ -63,7 +68,7 @@ class STM_Motor_SCL:
   def setup_motor(self, accl_decl_rate = 0.4, gearing = 4000, jog_speed = 0.4, velocity = 0.4):
      """ Sets initial motor settings, gearing, modes and velocities. """
 
-     print "Setting up motor..."
+     self._log.info("Setting up motor...")
      self.stop_jogging()
      self.set_electronic_gearing(gearing)
      self.set_encoder_function(self.ENCODER_STALL_PREVENTION)
@@ -76,7 +81,7 @@ class STM_Motor_SCL:
      self.set_jog_decceleration_rate(accl_decl_rate)
      self.set_jog_acceleration_rate(accl_decl_rate)
      self.set_jog_speed(jog_speed)
-     print "Done Setting up motor..."
+     self._log.info("Done Setting up motor...")
 
      return self
  
@@ -160,7 +165,7 @@ class STM_Motor_SCL:
     return(self.scl_send_command("FL" + (str)(encoder_counts)));
     
   def feed_to_position(self, encoder_counts):
-    print "Feeding to " + str(encoder_counts)
+    self._log.info("Feeding to " + str(encoder_counts))
     self.target_position = encoder_counts
     return(self.scl_send_command("FP" + (str)(int(encoder_counts))));
     
@@ -168,7 +173,7 @@ class STM_Motor_SCL:
   def is_at_target_position(self):
     """ Returns True if the motor is at the target position that it was last instructed to move to, False otherwise. """
     p = self.get_immediate_encoder_position()
-    print "Checking position: " + str(p) + ", " + str(self.target_position)
+    self._log.info("Checking position: " + str(p) + ", " + str(self.target_position))
 
     window = 40
     if( p < (self.target_position + window) and p > (self.target_position - window) ):
@@ -219,7 +224,7 @@ class STM_Motor_SCL:
   def get_angle(self):
     """ Calculates the current angle of the device the motor is controlling based on the known gear ratio and the electronic gearing set on the motor. """
     ep = self.get_immediate_encoder_position()
-    #print "EP = " + str(ep) + ", self.motor_gearing = " + str(self.motor_gearing) + ", self.mechanical_gearing = " + str(self.mechanical_gearing)
+    #self._log.info("EP = " + str(ep) + ", self.motor_gearing = " + str(self.motor_gearing) + ", self.mechanical_gearing = " + str(self.mechanical_gearing))
     ang = float((float(ep) / float(self.motor_gearing)) * 360.0) / float(self.mechanical_gearing)
     return ang
 
@@ -297,21 +302,20 @@ class STM_Motor_SCL:
         data = ""
         data, addr = self.sock.recvfrom(1024) 
         data = data.strip()
-        print "Purged a packet from the RX socket: " + self.ip + ": '" + str(data) + "'"
-        print
+        self._log.info("Purged a packet from the RX socket: " + self.ip + ": '" + str(data) + "'")
 
         if( data.find("%") != -1 ):
-          print "Got a percent..."
+          self._log.info("Got a percent...")
           got_percent = True
           break
 
       except socket.error:
-        print "Timeout while purging RX socket, good..."
+        self._log.info("Timeout while purging RX socket, good...")
         break
 
     self.sock.settimeout(self.default_socket_timeout)
 
-    print "Got percent = " + str(got_percent)
+    self._log.info("Got percent = " + str(got_percent))
     return(got_percent)
 
   def scl_send_command(self, cmd, cmd_type = 'executed'):
@@ -322,9 +326,8 @@ class STM_Motor_SCL:
     command = pack(pack_data, 0, 7, cmd, '\r')
     
     send_time = time.clock()
-    print str(send_time) + ": UDP target IP:", self.ip, "UDP target port:", self.port, " CMD:", cmd
+    self._log.info((str(send_time) + ": UDP target IP:", self.ip, "UDP target port:", self.port, " CMD:", cmd))
     #print "pack_data:", pack_data
-    print 
     #print "Command:", command, ", Len = ", (str)(len(command)) 
 
     if not self.sock.sendto(command, (self.ip, self.port)):
@@ -338,13 +341,13 @@ class STM_Motor_SCL:
 
     #for i in range(0,len(data)):
     #  print "data[",i,"]= '",data[i],"'"
-    print "Raw data from datagram is '" + data.rstrip() + "'"
+    self._log.debug("Raw data from datagram is '" + data.rstrip() + "'")
 
 
     # The ack for an executed command is a % and a buffered command is a asterix *
     if((cmd_type == 'executed' and data[2] != '%' and data[2] != '*') ):
-      print "ERROR: received message: '", data, "'"
-      print "ERROR: received message: '", data[1], "', " + cmd_type
+      self._log.error("ERROR: received message: '", data, "'")
+      self._log.error("ERROR: received message: '", data[1], "', " + cmd_type)
       raise Exception("Did not get expected response from " + str(self.ip) + ", '" + cmd_type + "' command '" + str(cmd) + "', Motor: '" + data + "'")
 
     # Ack for executed command is *
@@ -365,17 +368,17 @@ class STM_Motor_SCL:
     if( cmd_type == 'value_hex_signed' ):
       m = re.search('^.*=([0-9A-Z\.]+)$', data)
       if( m ) :
-        print "Group is '" + str(m.group(1)) + "'"
+        #self._log.debug("Group is '" + str(m.group(1)) + "'")
 
         data = int(m.group(1),16)
 
         if data > 0x7FFFFFFF:
           data -= 0x100000000
 
-        print "Data parsed is " + str(data)
+        #self._log.debug("Data parsed is " + str(data))
 
 
-    print str(time.clock()) + ": cmd_time = " + str(cmd_time) + " Return data is '" + str(data) + "'"
+    self._log.info(str(time.clock()) + ": cmd_time = " + str(cmd_time) + " Return data is '" + str(data) + "'")
     return(data);
 
 
