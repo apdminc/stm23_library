@@ -4,10 +4,12 @@ from struct import *
 import time
 import re
 import logging
+import string
 
-#frame_motor_ip = '10.1.1.10'
-#l2_motor_ip    = '10.1.1.11'
-#l1_motor_ip    = '10.1.1.12'
+def stm_ascii_only(text):
+  return ''.join([i if i in string.printable else ' ' for i in text])
+  #return ''.join([i if ord(i) < 128 else ' ' for i in text])
+
 
 #FIXME use the new style of class MyObj(obj):
 class STM_Motor_SCL:
@@ -49,11 +51,11 @@ class STM_Motor_SCL:
 
     self.sock.settimeout(self.default_socket_timeout)
 
-    mv = self.get_model_revision()
-    self._log.info("Model Revision is '" + str(mv) + "'")
+    #mv = self.get_model_revision()
+    #self._log.info("Model Revision is '" + str(mv) + "'")
 
-    rv = self.get_revision_level()
-    self._log.info("Revision Level is '" + str(rv) + "'")
+    #rv = self.get_revision_level()
+    #self._log.info("Revision Level is '" + str(rv) + "'")
 
     #mn = self.get_model_number()
 
@@ -270,7 +272,7 @@ class STM_Motor_SCL:
     return(self.scl_send_command("IU", 'value'));
     
   def get_immediate_velocity_actual(self):
-    return(self.scl_send_command("IV0", 'value'));
+    return(self.scl_send_command("IV0", 'value_hex_signed'));
     
   def get_immediate_velocity_target(self):
     return(self.scl_send_command("IV1", 'value'));
@@ -341,14 +343,14 @@ class STM_Motor_SCL:
 
     #for i in range(0,len(data)):
     #  print "data[",i,"]= '",data[i],"'"
-    self._log.debug("Raw data from datagram is '" + data.rstrip() + "'")
+    self._log.debug("Raw data from datagram is '" + stm_ascii_only(data.rstrip()) + "'")
 
 
     # The ack for an executed command is a % and a buffered command is a asterix *
     if((cmd_type == 'executed' and data[2] != '%' and data[2] != '*') ):
       self._log.error("ERROR: received message: '", data, "'")
       self._log.error("ERROR: received message: '", data[1], "', " + cmd_type)
-      raise Exception("Did not get expected response from " + str(self.ip) + ", '" + cmd_type + "' command '" + str(cmd) + "', Motor: '" + data + "'")
+      raise Exception("Did not get expected response from " + str(self.ip) + ", '" + cmd_type + "' command '" + str(cmd) + "', Motor: '" + str(data) + "'")
 
     # Ack for executed command is *
     # Ack for buffered command is *
@@ -378,7 +380,7 @@ class STM_Motor_SCL:
         #self._log.debug("Data parsed is " + str(data))
 
 
-    self._log.info(str(time.clock()) + ": cmd_time = " + str(cmd_time) + " Return data is '" + str(data) + "'")
+    self._log.info(str(time.clock()) + ": cmd_time = " + str(cmd_time) + " Return data is '" + stm_ascii_only(str(data)) + "'")
     return(data);
 
 
