@@ -51,11 +51,11 @@ class STM_Motor_SCL:
 
     self.sock.settimeout(self.default_socket_timeout)
 
-    #mv = self.get_model_revision()
-    #self._log.info("Model Revision is '" + str(mv) + "'")
+    mv = self.get_model_revision()
+    self._log.info("Model Revision is '" + str(mv) + "'")
 
-    #rv = self.get_revision_level()
-    #self._log.info("Revision Level is '" + str(rv) + "'")
+    rv = self.get_revision_level()
+    self._log.info("Revision Level is '" + str(rv) + "'")
 
     #mn = self.get_model_number()
 
@@ -122,11 +122,18 @@ class STM_Motor_SCL:
   def set_velocity(self, rps):
     return(self.scl_send_command("VE" + str(round(rps, 4))))
 
+  def check_accl_range(self, rpsps):
+    if( rpsps < 0.167 or rpsps > 5461.167 ):
+      self._log.error("ERROR: rpsps is out of range: " + str(rpsps))
+      raise Exception("rpsps is out of range: " + str(rpsps))
 
   def set_acceleration_rate(self, rpsps):
+    """ Minimum of 0.167 per manual """
+    self.check_accl_range(rpsps)
     return(self.scl_send_command("AC" + (str)(rpsps)));
     
   def set_decceleration_rate(self, rpsps):
+    self.check_accl_range(rpsps)
     return(self.scl_send_command("DE" + (str)(rpsps)));
     
   def get_acceleration_rate(self):
@@ -136,11 +143,12 @@ class STM_Motor_SCL:
     return(self.scl_send_command("DE", 'value'));
     
 
-
   def set_jog_acceleration_rate(self, rpsps):
+    self.check_accl_range(rpsps)
     return(self.scl_send_command("JA" + (str)(rpsps)));
     
   def set_jog_decceleration_rate(self, rpsps):
+    self.check_accl_range(rpsps)
     return(self.scl_send_command("JL" + (str)(rpsps)));
     
   def get_jog_acceleration_rate(self):
@@ -348,8 +356,8 @@ class STM_Motor_SCL:
 
     # The ack for an executed command is a % and a buffered command is a asterix *
     if((cmd_type == 'executed' and data[2] != '%' and data[2] != '*') ):
-      self._log.error("ERROR: received message: '", data, "'")
-      self._log.error("ERROR: received message: '", data[1], "', " + cmd_type)
+      self._log.error("ERROR: received message: '" + str( data) + "'")
+      self._log.error("ERROR: received message: '" + str(data[1]) + "', " + cmd_type)
       raise Exception("Did not get expected response from " + str(self.ip) + ", '" + cmd_type + "' command '" + str(cmd) + "', Motor: '" + str(data) + "'")
 
     # Ack for executed command is *
