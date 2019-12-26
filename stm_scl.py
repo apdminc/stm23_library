@@ -90,7 +90,9 @@ class STM_Motor_SCL:
 
   def get_model_revision(self):
     s = self.scl_send_command("MV", 'none')
-    return(s.encode('ascii', errors='ignore'))
+    fs = filter(lambda x: x in string.printable, s)
+    return(fs)
+    #return(s.encode('ascii', errors='ignore'))
     #return(self.scl_send_command("MV", 'none'));
 
   def get_model_number(self):
