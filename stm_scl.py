@@ -89,25 +89,27 @@ class STM_Motor_SCL:
  
 
   def get_model_revision(self):
-    return(self.scl_send_command("MV", 'none'));
+    s = self.scl_send_command("MV", 'none')
+    return(s.encode('ascii', errors='ignore'))
+    #return(self.scl_send_command("MV", 'none'));
 
   def get_model_number(self):
-    return(self.scl_send_command("MN", 'none'));
+    return(self.scl_send_command("MN", 'none'))
 
   def get_revision_level(self):
-    return(self.scl_send_command("RV", 'value'));
+    return(self.scl_send_command("RV", 'value'))
 
   def get_alarm_code(self):
-    return(self.scl_send_command("AL", 'value'));
+    return(self.scl_send_command("AL", 'value'))
 
   def get_request_status(self):
-    return(self.scl_send_command("RS", 'value'));
+    return(self.scl_send_command("RS", 'value'))
 
   def no_operation(self):
-    return(self.scl_send_command("NO"));
+    return(self.scl_send_command("NO"))
     
   def reset(self):
-    return(self.scl_send_command("RE"));
+    return(self.scl_send_command("RE"))
     
 
   def set_velocity_max(self, rps):
@@ -130,54 +132,54 @@ class STM_Motor_SCL:
   def set_acceleration_rate(self, rpsps):
     """ Minimum of 0.167 per manual """
     self.check_accl_range(rpsps)
-    return(self.scl_send_command("AC" + (str)(rpsps)));
+    return(self.scl_send_command("AC" + (str)(rpsps)))
     
   def set_decceleration_rate(self, rpsps):
     self.check_accl_range(rpsps)
-    return(self.scl_send_command("DE" + (str)(rpsps)));
+    return(self.scl_send_command("DE" + (str)(rpsps)))
     
   def get_acceleration_rate(self):
-    return(self.scl_send_command("AC", 'value'));
+    return(self.scl_send_command("AC", 'value'))
     
   def get_decceleration_rate(self):
-    return(self.scl_send_command("DE", 'value'));
+    return(self.scl_send_command("DE", 'value'))
     
 
   def set_jog_acceleration_rate(self, rpsps):
     self.check_accl_range(rpsps)
-    return(self.scl_send_command("JA" + (str)(rpsps)));
+    return(self.scl_send_command("JA" + (str)(rpsps)))
     
   def set_jog_decceleration_rate(self, rpsps):
     self.check_accl_range(rpsps)
-    return(self.scl_send_command("JL" + (str)(rpsps)));
+    return(self.scl_send_command("JL" + (str)(rpsps)))
     
   def get_jog_acceleration_rate(self):
-    return(self.scl_send_command("JA", 'value'));
+    return(self.scl_send_command("JA", 'value'))
     
   def get_jog_decceleration_rate(self):
-    return(self.scl_send_command("JL", 'value'));
+    return(self.scl_send_command("JL", 'value'))
     
   
 
   def commence_jogging(self):
-    return(self.scl_send_command("CJ"));
+    return(self.scl_send_command("CJ"))
     
   def stop_jogging(self):
-    return(self.scl_send_command("SJ"));
+    return(self.scl_send_command("SJ"))
     
   def stop_and_kill(self, decel_rate=""):
-    return(self.scl_send_command("SK"+decel_rate));
+    return(self.scl_send_command("SK"+decel_rate))
 
   def move_distance(self, encoder_counts):
-    return(self.scl_send_command("DI" + (str)(encoder_counts)));
+    return(self.scl_send_command("DI" + (str)(encoder_counts)))
     
   def feed_to_length(self, encoder_counts):
-    return(self.scl_send_command("FL" + (str)(encoder_counts)));
+    return(self.scl_send_command("FL" + (str)(encoder_counts)))
     
   def feed_to_position(self, encoder_counts):
     self._log.info("Feeding to " + str(encoder_counts))
     self.target_position = encoder_counts
-    return(self.scl_send_command("FP" + (str)(int(encoder_counts))));
+    return(self.scl_send_command("FP" + (str)(int(encoder_counts))))
     
 
   def is_at_target_position(self):
@@ -199,31 +201,31 @@ class STM_Motor_SCL:
 
 
   def set_motor_enable(self):
-    return(self.scl_send_command("ME"));
+    return(self.scl_send_command("ME"))
     
   def set_motor_disable(self):
-    return(self.scl_send_command("MD"));
+    return(self.scl_send_command("MD"))
  
   def stop(self):
-    return(self.scl_send_command("ST"));
+    return(self.scl_send_command("ST"))
 
 
   def seek_home(self, append):
-    return(self.scl_send_command("SH" + (str)(append)));
+    return(self.scl_send_command("SH" + (str)(append)))
 
   def enable_input(self, append):
-    return(self.scl_send_command("SI" + (str)(append)));
+    return(self.scl_send_command("SI" + (str)(append)))
  
 
    
   def set_encoder_function(self, fv):
-    return(self.scl_send_command("EF" + (str)(fv)));
+    return(self.scl_send_command("EF" + (str)(fv)))
     
   def get_encoder_function(self):
-    return(self.scl_send_command("EF", 'value'));
+    return(self.scl_send_command("EF", 'value'))
     
   def set_position(self, fv):
-    return(self.scl_send_command("SP" + (str)(fv)));
+    return(self.scl_send_command("SP" + (str)(fv)))
 
   def get_mechanical_gearing(self):
     return(self.mechanical_gearing)
@@ -241,24 +243,24 @@ class STM_Motor_SCL:
   def set_angle(self, new_angle):
     """ Move the motor shaft such that the thing being controled is at a specific angle, factoring in the mechanical and electronic gearing set. """
     position = int(round((new_angle * self.mechanical_gearing / 360.0) * self.motor_gearing))
-    #print "Feeding to position " + str(position) + " for new angle " + str(new_angle)
+    #print("Feeding to position " + str(position) + " for new angle " + str(new_angle))
     self.feed_to_position(position)
     return
 
   def set_encoder_position(self, fv):
-    return(self.scl_send_command("EP" + (str)(fv)));
+    return(self.scl_send_command("EP" + (str)(fv)))
     
   def get_encoder_position(self):
-    return(self.scl_send_command("EP", 'value'));
+    return(self.scl_send_command("EP", 'value'))
 
   def get_immediate_encoder_position(self):
-    return(self.scl_send_command("IE", 'value_hex_signed'));
+    return(self.scl_send_command("IE", 'value_hex_signed'))
     
   def set_encoder_resolution(self, fv):
-    return(self.scl_send_command("ER" + (str)(fv)));
+    return(self.scl_send_command("ER" + (str)(fv)))
     
   def get_encoder_resolution(self):
-    return(self.scl_send_command("ER", 'value'));
+    return(self.scl_send_command("ER", 'value'))
     
   def get_last_electronic_gearing(self):
     return(self.motor_gearing)
@@ -268,25 +270,25 @@ class STM_Motor_SCL:
     #400=0.9 degree steps
     #800=0.045 degree steps
     self.motor_gearing = pulses_per_revolution
-    return(self.scl_send_command("EG" + (str)(pulses_per_revolution)));
+    return(self.scl_send_command("EG" + (str)(pulses_per_revolution)))
 
   def get_immediate_current(self):
-    return(self.scl_send_command("IC", 'value'));
+    return(self.scl_send_command("IC", 'value'))
     
   def get_immediate_temperature(self):
-    return(self.scl_send_command("IT", 'value'));
+    return(self.scl_send_command("IT", 'value'))
     
   def get_immediate_voltage(self):
-    return(self.scl_send_command("IU", 'value'));
+    return(self.scl_send_command("IU", 'value'))
     
   def get_immediate_velocity_actual(self):
-    return(self.scl_send_command("IV0", 'value_hex_signed'));
+    return(self.scl_send_command("IV0", 'value_hex_signed'))
     
   def get_immediate_velocity_target(self):
-    return(self.scl_send_command("IV1", 'value'));
+    return(self.scl_send_command("IV1", 'value'))
 
   def get_motor_current_rated(self):
-    return(self.scl_send_command("MC", 'value'));
+    return(self.scl_send_command("MC", 'value'))
     
     
   def teardown(self):
@@ -337,8 +339,8 @@ class STM_Motor_SCL:
     
     send_time = time.clock()
     self._log.info((str(send_time) + ": UDP target IP:", self.ip, "UDP target port:", self.port, " CMD:", cmd))
-    #print "pack_data:", pack_data
-    #print "Command:", command, ", Len = ", (str)(len(command)) 
+    #print("pack_data:", pack_data)
+    #print("Command:", command, ", Len = ", (str)(len(command)))
 
     if not self.sock.sendto(command, (self.ip, self.port)):
       raise Exception("Unable to send UDP command to motor")
@@ -350,7 +352,7 @@ class STM_Motor_SCL:
     cmd_time = rx_time - send_time
 
     #for i in range(0,len(data)):
-    #  print "data[",i,"]= '",data[i],"'"
+    #  print("data[",i,"]= '",data[i],"'")
     self._log.debug("Raw data from datagram is '" + stm_ascii_only(data.rstrip()) + "'")
 
 
@@ -389,7 +391,7 @@ class STM_Motor_SCL:
 
 
     self._log.info(str(time.clock()) + ": cmd_time = " + str(cmd_time) + " Return data is '" + stm_ascii_only(str(data)) + "'")
-    return(data);
+    return(data)
 
 
 
