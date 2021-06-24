@@ -5,6 +5,7 @@ import time
 import re
 import logging
 import string
+import sys
 
 def stm_ascii_only(text):
   return ''.join([i if i in string.printable else ' ' for i in text])
@@ -62,7 +63,7 @@ class STM_Motor_SCL:
     #if mv != '105W049K':
     #  self._log.error("ERROR Stepper motor did not responded with expected 105W049K value")
 
-    return;
+    return
 
   def get_ip(self):
     return(self.ip)
@@ -90,7 +91,11 @@ class STM_Motor_SCL:
 
   def get_model_revision(self):
     s = self.scl_send_command("MV", 'none')
-    fs = filter(lambda x: x in string.printable, s)
+    if( sys.version_info.major >= 3 ):
+      fs = [x for x in s if x in string.printable]
+    else:
+      fs = filter(lambda x: x in string.printable, s)
+      
     return(fs)
     #return(s.encode('ascii', errors='ignore'))
     #return(self.scl_send_command("MV", 'none'));
