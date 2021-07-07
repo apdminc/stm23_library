@@ -8,8 +8,16 @@ import string
 import sys
 
 def stm_ascii_only(text):
-  return ''.join([i if i in string.printable else ' ' for i in text])
-  #return ''.join([i if ord(i) < 128 else ' ' for i in text])
+  if( sys.version_info.major < 3 ):
+    return ''.join([i if i in string.printable else ' ' for i in text])
+    #return ''.join([i if ord(i) < 128 else ' ' for i in text])
+  else:
+    if( isinstance(text, (bytes, bytearray)) ):
+      ret = ''.join([chr(i) if chr(i) in string.printable else ' ' for i in text])
+      return(ret.rstrip())
+
+
+  return(str(text))
 
 
 #FIXME use the new style of class MyObj(obj):
@@ -342,11 +350,12 @@ class STM_Motor_SCL:
 
     # Note: the STM32 is modal. If you power it up and connect via TCP, it seems to got into TCP mode and no longer handles UDP. You have to reset it to get it back into UDP mode.
     pack_data = "BB" + (str)(len(cmd)) + "sc"
-    command = pack(pack_data, 0, 7, cmd, '\r')
-    
-    send_time = time.clock()
-    self._log.info((str(send_time) + ": UDP target IP:", self.ip, "UDP target port:", self.port, " CMD:", cmd))
     #print("pack_data:", pack_data)
+    #print("cmd:", str(cmd))
+    command = pack(pack_data, 0, 7, cmd.encode('utf-8'), '\r'.encode('utf-8'))
+    
+    send_time = time.process_time()
+    self._log.info((str(send_time) + ": UDP target IP:", self.ip, "UDP target port:", self.port, " CMD:", cmd))
     #print("Command:", command, ", Len = ", (str)(len(command)))
 
     if not self.sock.sendto(command, (self.ip, self.port)):
@@ -355,17 +364,17 @@ class STM_Motor_SCL:
 
     #time.sleep(0.010)
     data, addr = self.sock.recvfrom(1024) # buffer size is 1024 bytes
-    rx_time = time.clock()
+    data = bytearray(data)
+    rx_time = time.process_time()
     cmd_time = rx_time - send_time
 
     #for i in range(0,len(data)):
     #  print("data[",i,"]= '",data[i],"'")
     self._log.debug("Raw data from datagram is '" + stm_ascii_only(data.rstrip()) + "'")
 
-
     # The ack for an executed command is a % and a buffered command is a asterix *
-    if((cmd_type == 'executed' and data[2] != '%' and data[2] != '*') ):
-      self._log.error("ERROR: received message: '" + str( data) + "'")
+    if((cmd_type == 'executed' and data[2] != ord('%') and data[2] != ord('*')) ):
+      self._log.error("ERROR: received message: '" + str(data) + "'")
       self._log.error("ERROR: received message: '" + str(data[1]) + "', " + cmd_type)
       raise Exception("Did not get expected response from " + str(self.ip) + ", '" + cmd_type + "' command '" + str(cmd) + "', Motor: '" + str(data) + "'")
 
@@ -373,8 +382,10 @@ class STM_Motor_SCL:
     # Ack for buffered command is *
 
     if data[0] == 0 and data[1] == 7:
-      data[0] = ' '
-      data[1] = ' '
+      data[0] = ord(' ')
+      data[1] = ord(' ')
+
+    data = data.decode('utf-8')
     data = data.strip()
 
     if cmd_type == 'value':
@@ -397,7 +408,7 @@ class STM_Motor_SCL:
         #self._log.debug("Data parsed is " + str(data))
 
 
-    self._log.info(str(time.clock()) + ": cmd_time = " + str(cmd_time) + " Return data is '" + stm_ascii_only(str(data)) + "'")
+    self._log.info(str(time.process_time()) + ": cmd_time = " + str(cmd_time) + " Return data is '" + stm_ascii_only(str(data)) + "'")
     return(data)
 
 
